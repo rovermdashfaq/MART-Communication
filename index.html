@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MART - Professional Communication</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <style>
+        :root {
+            --primary: #25D366;
+            --primary-dark: #128C7E;
+            --secondary: #34B7F1;
+            --dark: #075E54;
+            --light: #ECE5DD;
+            --white: #FFFFFF;
+            --gray: #3C3C3C;
+            --light-gray: #F0F0F0;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --gradient: linear-gradient(135deg, var(--dark), var(--primary-dark));
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: var(--gradient);
+            color: var(--gray);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--gradient);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Auth Screen */
+        #auth-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: var(--gradient);
+        }
+
+        .auth-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 40px;
+            border-radius: 25px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 450px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .auth-logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .auth-logo i {
+            font-size: 4rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .auth-logo h1 {
+            color: var(--dark);
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 18px 20px;
+            margin: 12px 0;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-radius: 15px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .auth-input:focus {
+            border-color: var(--primary);
+            outline: none;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(37, 211, 102, 0.1);
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 18px;
+            margin: 12px 0;
+            border: none;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s;
+        }
+
+        .btn-google {
+            background: #DB4437;
+            color: white;
+        }
+
+        .btn-facebook {
+            background: #4267B2;
+            color: white;
+        }
+
+        .btn-email {
+            background: var(--primary);
+            color: white;
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-3px);
+            opacity: 0.9;
+        }
+
+        /* Dashboard */
+        #dashboard {
+            display: none;
+            height: 100vh;
+            background: var(--light);
+        }
+
+        .app-header {
+            background: var(--dark);
+            color: white;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo i {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .app-container {
+            display: flex;
+            height: calc(100vh - 75px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 380px;
+            background: var(--white);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .search-container {
+            padding: 25px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 12px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-radius: 25px;
+            outline: none;
+            font-size: 15px;
+            background: var(--light-gray);
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+        }
+
+        .new-chat-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            font-size: 1.3rem;
+        }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .conversation-item {
+            padding: 18px 25px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .conversation-item:hover {
+            background: rgba(37, 211, 102, 0.1);
+        }
+
+        .conversation-avatar {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+
+        .conversation-info {
+            flex: 1;
+        }
+
+        .conversation-name {
+            font-weight: 700;
+            margin-bottom: 6px;
+            font-size: 1.1rem;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--light);
+        }
+
+        .chat-header {
+            background: var(--white);
+            padding: 18px 25px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-contact {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .chat-contact-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+
+        .call-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .call-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: all 0.3s;
+        }
+
+        .call-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .messages-container {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .message-sent {
+            background: var(--primary);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message-received {
+            background: var(--white);
+            color: var(--gray);
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .message-input-container {
+            padding: 25px;
+            background: var(--white);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 18px 25px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-radius: 30px;
+            background: var(--light-gray);
+            outline: none;
+            font-size: 16px;
+        }
+
+        .send-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 55px;
+            height: 55px;
+            cursor: pointer;
+            font-size: 1.3rem;
+        }
+
+        /* Call Interface */
+        .call-interface {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 2000;
+            display: none;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .remote-video-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .remote-video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .local-video-container {
+            position: absolute;
+            bottom: 120px;
+            right: 25px;
+            width: 220px;
+            height: 165px;
+            border: 3px solid white;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .local-video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .call-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .call-control-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .call-control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.15);
+        }
+
+        .call-control-btn.muted {
+            background: #FF3B30;
+        }
+
+        .call-control-btn.end-call {
+            background: #FF3B30;
+        }
+
+        .call-timer {
+            position: absolute;
+            top: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* Incoming Call Modal */
+        .incoming-call-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+
+        .call-modal-content {
+            background: white;
+            padding: 50px;
+            border-radius: 25px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .caller-info img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin-bottom: 25px;
+        }
+
+        .call-buttons {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            margin-top: 35px;
+        }
+
+        .btn-accept, .btn-reject {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: none;
+            font-size: 32px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-accept {
+            background: #25D366;
+            color: white;
+        }
+
+        .btn-reject {
+            background: #FF3B30;
+            color: white;
+        }
+
+        .btn-accept:hover, .btn-reject:hover {
+            transform: scale(1.15);
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 10000;
+            max-width: 400px;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-spinner"></div>
+        <h2>MART</h2>
+        <p>Loading your professional communication platform...</p>
+    </div>
+
+    <!-- Auth Screen -->
+    <div id="auth-screen">
+        <div class="auth-container">
+            <div class="auth-logo">
+                <i class="fas fa-comments"></i>
+                <h1>MART</h1>
+                <p>Professional Communication Platform</p>
+            </div>
+            
+            <div id="email-auth">
+                <input type="text" id="displayName" class="auth-input" placeholder="Full Name" required>
+                <input type="email" id="email" class="auth-input" placeholder="Email Address" required>
+                <input type="password" id="password" class="auth-input" placeholder="Password" required>
+                <button class="auth-btn btn-email" onclick="authSignUp()">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </button>
+            </div>
+
+            <div style="text-align: center; margin: 25px 0; color: #666;">Or continue with</div>
+
+            <button class="auth-btn btn-google" onclick="googleSignIn()">
+                <i class="fab fa-google"></i> Continue with Google
+            </button>
+            
+            <button class="auth-btn btn-facebook" onclick="facebookSignIn()">
+                <i class="fab fa-facebook"></i> Continue with Facebook
+            </button>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard">
+        <div class="app-header">
+            <div class="header-logo">
+                <i class="fas fa-comments"></i>
+                <h2>MART</h2>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="user-avatar">U</div>
+                <span id="user-display-name">User</span>
+                <button onclick="signOut()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 10px 20px; border-radius: 25px; cursor: pointer; margin-left: 15px;">
+                    Sign Out
+                </button>
+            </div>
+        </div>
+
+        <div class="app-container">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="search-container">
+                    <div class="search-box">
+                        <input type="text" id="search-input" class="search-input" placeholder="Search users...">
+                        <button class="new-chat-btn" onclick="searchUsers()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="conversations-list" id="conversations-list">
+                    <div class="conversation-item" onclick="selectConversation('demo')">
+                        <div class="conversation-avatar">D</div>
+                        <div class="conversation-info">
+                            <div class="conversation-name">Demo Contact</div>
+                            <div class="conversation-last-message">Click to start conversation</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="chat-area">
+                <div class="chat-header">
+                    <div class="chat-contact">
+                        <div class="chat-contact-avatar" id="chat-contact-avatar">D</div>
+                        <div>
+                            <div id="chat-contact-name" style="font-weight: 700;">Demo Contact</div>
+                            <div id="chat-contact-status" style="font-size: 0.9rem; color: var(--primary);">● Online</div>
+                        </div>
+                    </div>
+                    <div class="call-buttons">
+                        <button class="call-btn" onclick="startAudioCall('demo-user')">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                        <button class="call-btn" onclick="startVideoCall('demo-user')">
+                            <i class="fas fa-video"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="messages-container" id="messages-container">
+                    <div class="message message-received">
+                        Welcome to MART! You can test audio and video calls with this demo contact.
+                        <div class="message-time">Just now</div>
+                    </div>
+                </div>
+                
+                <div class="message-input-container">
+                    <input type="text" id="message-input" class="message-input" placeholder="Type your message...">
+                    <button class="send-btn" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call Interface -->
+    <div class="call-interface" id="call-interface">
+        <div class="video-container">
+            <div class="remote-video-container">
+                <video id="remote-video" autoplay playsinline></video>
+            </div>
+            <div class="local-video-container">
+                <video id="local-video" autoplay muted playsinline></video>
+            </div>
+            <div class="call-controls">
+                <button id="mute-audio" class="call-control-btn">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button id="mute-video" class="call-control-btn">
+                    <i class="fas fa-video"></i>
+                </button>
+                <button id="switch-camera" class="call-control-btn">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button id="end-call" class="call-control-btn end-call">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+            </div>
+            <div class="call-timer">
+                <span id="call-duration">00:00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incoming Call Modal -->
+    <div class="incoming-call-modal" id="incoming-call-modal">
+        <div class="call-modal-content">
+            <div class="caller-info">
+                <div class="user-avatar" style="width: 120px; height: 120px; font-size: 2.5rem; margin: 0 auto 25px; background: var(--secondary);">C</div>
+                <h3 id="caller-name">Incoming Call</h3>
+                <p id="call-type">Video Call</p>
+            </div>
+            <div class="call-buttons">
+                <button id="accept-call" class="btn-accept">
+                    <i class="fas fa-phone"></i>
+                </button>
+                <button id="reject-call" class="btn-reject">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvLORiLEiO66AfS8ao9FVZ2kLgSXbiOao",
+            authDomain: "mart-9214e.firebaseapp.com",
+            projectId: "mart-9214e",
+            storageBucket: "mart-9214e.firebasestorage.app",
+            messagingSenderId: "88188904501",
+            appId: "1:88188904501:web:873529058f4dcb4732fd7c"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Auth Providers
+        const googleProvider = new firebase.auth.GoogleAuthProvider();
+        const facebookProvider = new firebase.auth.FacebookAuthProvider();
+
+        // Global Variables
+        let currentUser = null;
+        let webrtcManager = null;
+        let callTimerInterval = null;
+        let callStartTime = null;
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.display = 'none';
+                initAuth();
+                initWebRTC();
+            }, 2000);
+        });
+
+        // Authentication Functions
+        function initAuth() {
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    currentUser = user;
+                    showDashboard();
+                    loadUserData();
+                    setupCallListeners();
+                } else {
+                    showAuthScreen();
+                }
+            });
+        }
+
+        async function authSignUp() {
+            const displayName = document.getElementById('displayName').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!displayName || !email || !password) {
+                showNotification('Please fill all fields', 'error');
+                return;
+            }
+
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                const martId = generateMartId();
+                
+                await db.collection('users').doc(user.uid).set({
+                    uid: user.uid,
+                    email: email,
+                    displayName: displayName,
+                    martId: martId,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'online'
+                });
+
+                showNotification('Account created! Your MART ID: ' + martId, 'success');
+            } catch (error) {
+                showNotification('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function googleSignIn() {
+            try {
+                const result = await auth.signInWithPopup(googleProvider);
+                showNotification('Signed in with Google', 'success');
+            } catch (error) {
+                showNotification('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function facebookSignIn() {
+            try {
+                const result = await auth.signInWithPopup(facebookProvider);
+                showNotification('Signed in with Facebook', 'success');
+            } catch (error) {
+                showNotification('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function signOut() {
+            try {
+                if (currentUser) {
+                    await db.collection('users').doc(currentUser.uid).update({
+                        status: 'offline'
+                    });
+                }
+                await auth.signOut();
+                showNotification('Signed out successfully', 'info');
+            } catch (error) {
+                showNotification('Error signing out: ' + error.message, 'error');
+            }
+        }
+
+        function showAuthScreen() {
+            document.getElementById('auth-screen').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+
+        async function loadUserData() {
+            if (!currentUser) return;
+            
+            const userDoc = await db.collection('users').doc(currentUser.uid).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                document.getElementById('user-display-name').textContent = userData.displayName;
+                document.getElementById('user-avatar').textContent = userData.displayName.charAt(0).toUpperCase();
+            }
+        }
+
+        function generateMartId() {
+            const prefix = 'MART';
+            const timestamp = Date.now().toString(36);
+            const random = Math.random().toString(36).substring(2, 8);
+            return `${prefix}-${timestamp}-${random}`.toUpperCase();
+        }
+
+        // WebRTC Manager Class
+        class WebRTCManager {
+            constructor() {
+                this.localStream = null;
+                this.remoteStream = null;
+                this.peerConnection = null;
+                this.isCaller = false;
+                this.currentCallId = null;
+                this.callDoc = null;
+                
+                // STUN servers for NAT traversal
+                this.iceServers = {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' }
+                    ]
+                };
+            }
+
+            // Initialize peer connection
+            async initializePeerConnection() {
+                try {
+                    this.peerConnection = new RTCPeerConnection(this.iceServers);
+                    
+                    // Add local stream tracks
+                    if (this.localStream) {
+                        this.localStream.getTracks().forEach(track => {
+                            this.peerConnection.addTrack(track, this.localStream);
+                        });
+                    }
+                    
+                    // Handle incoming remote stream
+                    this.peerConnection.ontrack = (event) => {
+                        console.log('Received remote stream');
+                        this.remoteStream = event.streams[0];
+                        const remoteVideo = document.getElementById('remote-video');
+                        remoteVideo.srcObject = this.remoteStream;
+                    };
+                    
+                    // Handle ICE candidates
+                    this.peerConnection.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            this.sendICECandidate(event.candidate);
+                        }
+                    };
+                    
+                    // Handle connection state
+                    this.peerConnection.onconnectionstatechange = () => {
+                        console.log('Connection state:', this.peerConnection.connectionState);
+                        switch(this.peerConnection.connectionState) {
+                            case 'connected':
+                                showNotification('Call connected', 'success');
+                                break;
+                            case 'disconnected':
+                            case 'failed':
+                                showNotification('Call failed', 'error');
+                                this.endCall();
+                                break;
+                        }
+                    };
+                    
+                } catch (error) {
+                    console.error('Error initializing peer connection:', error);
+                    throw error;
+                }
+            }
+
+            // Start local media
+            async startLocalMedia(audio = true, video = true) {
+                try {
+                    this.localStream = await navigator.mediaDevices.getUserMedia({
+                        audio: audio,
+                        video: video ? { 
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        } : false
+                    });
+                    return this.localStream;
+                } catch (error) {
+                    console.error('Error accessing media devices:', error);
+                    throw error;
+                }
+            }
+
+            // Create and send offer (caller)
+            async createOffer(callId, calleeId, isVideoCall = true) {
+                try {
+                    this.isCaller = true;
+                    this.currentCallId = callId;
+                    
+                    await this.initializePeerConnection();
+                    await this.startLocalMedia(true, isVideoCall);
+                    
+                    // Show local video
+                    const localVideo = document.getElementById('local-video');
+                    localVideo.srcObject = this.localStream;
+                    
+                    // Create offer
+                    const offer = await this.peerConnection.createOffer();
+                    await this.peerConnection.setLocalDescription(offer);
+                    
+                    // Save call to Firestore
+                    this.callDoc = db.collection('calls').doc(callId);
+                    await this.callDoc.set({
+                        callId: callId,
+                        callerId: currentUser.uid,
+                        calleeId: calleeId,
+                        offer: offer,
+                        type: isVideoCall ? 'video' : 'audio',
+                        status: 'calling',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    // Listen for answer
+                    this.listenForAnswer();
+                    
+                    showNotification('Call initiated', 'info');
+                    return callId;
+                } catch (error) {
+                    console.error('Error creating offer:', error);
+                    throw error;
+                }
+            }
+
+            // Listen for answer from callee
+            listenForAnswer() {
+                this.callDoc.onSnapshot(async (doc) => {
+                    const callData = doc.data();
+                    if (!callData) return;
+                    
+                    if (callData.answer && this.isCaller) {
+                        console.log('Received answer from callee');
+                        await this.peerConnection.setRemoteDescription(callData.answer);
+                    }
+                    
+                    if (callData.iceCandidates) {
+                        for (const candidate of callData.iceCandidates) {
+                            if (candidate.from !== currentUser.uid) {
+                                await this.peerConnection.addIceCandidate(candidate.candidate);
+                            }
+                        }
+                    }
+                    
+                    if (callData.status === 'ended') {
+                        this.endCall();
+                    }
+                });
+            }
+
+            // Handle incoming call (callee)
+            async handleIncomingCall(callId) {
+                try {
+                    this.isCaller = false;
+                    this.currentCallId = callId;
+                    this.callDoc = db.collection('calls').doc(callId);
+                    
+                    // Listen for call updates
+                    this.callDoc.onSnapshot(async (doc) => {
+                        const callData = doc.data();
+                        if (!callData) return;
+                        
+                        if (callData.offer && !this.peerConnection) {
+                            // Show incoming call modal
+                            document.getElementById('incoming-call-modal').style.display = 'flex';
+                            document.getElementById('call-type').textContent = 
+                                callData.type === 'video' ? 'Video Call' : 'Audio Call';
+                        }
+                        
+                        if (callData.iceCandidates) {
+                            for (const candidate of callData.iceCandidates) {
+                                if (candidate.from !== currentUser.uid && this.peerConnection) {
+                                    await this.peerConnection.addIceCandidate(candidate.candidate);
+                                }
+                            }
+                        }
+                        
+                        if (callData.status === 'ended') {
+                            this.endCall();
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error handling incoming call:', error);
+                    throw error;
+                }
+            }
+
+            // Accept incoming call (callee)
+            async acceptCall() {
+                try {
+                    const callDoc = await this.callDoc.get();
+                    const callData = callDoc.data();
+                    
+                    await this.initializePeerConnection();
+                    await this.startLocalMedia(true, callData.type === 'video');
+                    
+                    // Show local video
+                    const localVideo = document.getElementById('local-video');
+                    localVideo.srcObject = this.localStream;
+                    
+                    await this.peerConnection.setRemoteDescription(callData.offer);
+                    
+                    const answer = await this.peerConnection.createAnswer();
+                    await this.peerConnection.setLocalDescription(answer);
+                    
+                    // Send answer back to caller
+                    await this.callDoc.update({
+                        answer: answer,
+                        status: 'connected'
+                    });
+                    
+                    document.getElementById('incoming-call-modal').style.display = 'none';
+                    document.getElementById('call-interface').style.display = 'block';
+                    startCallTimer();
+                    
+                    showNotification('Call accepted', 'success');
+                } catch (error) {
+                    console.error('Error accepting call:', error);
+                    throw error;
+                }
+            }
+
+            // Send ICE candidate
+            async sendICECandidate(candidate) {
+                if (!this.currentCallId) return;
+                
+                const candidateData = {
+                    from: currentUser.uid,
+                    candidate: candidate,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await this.callDoc.update({
+                    iceCandidates: firebase.firestore.FieldValue.arrayUnion(candidateData)
+                });
+            }
+
+            // End call
+            async endCall() {
+                if (this.currentCallId) {
+                    await this.callDoc.update({
+                        status: 'ended',
+                        endedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                this.cleanupCall();
+            }
+
+            // Cleanup resources
+            cleanupCall() {
+                if (this.localStream) {
+                    this.localStream.getTracks().forEach(track => track.stop());
+                    this.localStream = null;
+                }
+                
+                if (this.peerConnection) {
+                    this.peerConnection.close();
+                    this.peerConnection = null;
+                }
+                
+                document.getElementById('call-interface').style.display = 'none';
+                document.getElementById('incoming-call-modal').style.display = 'none';
+                stopCallTimer();
+                
+                this.isCaller = false;
+                this.currentCallId = null;
+                this.callDoc = null;
+            }
+
+            // Toggle audio
+            toggleAudio() {
+                if (this.localStream) {
+                    const audioTrack = this.localStream.getAudioTracks()[0];
+                    if (audioTrack) {
+                        audioTrack.enabled = !audioTrack.enabled;
+                        const button = document.getElementById('mute-audio');
+                        const icon = button.querySelector('i');
+                        
+                        if (audioTrack.enabled) {
+                            icon.className = 'fas fa-microphone';
+                            button.classList.remove('muted');
+                        } else {
+                            icon.className = 'fas fa-microphone-slash';
+                            button.classList.add('muted');
+                        }
+                        return audioTrack.enabled;
+                    }
+                }
+                return false;
+            }
+
+            // Toggle video
+            toggleVideo() {
+                if (this.localStream) {
+                    const videoTrack = this.localStream.getVideoTracks()[0];
+                    if (videoTrack) {
+                        videoTrack.enabled = !videoTrack.enabled;
+                        const button = document.getElementById('mute-video');
+                        const icon = button.querySelector('i');
+                        
+                        if (videoTrack.enabled) {
+                            icon.className = 'fas fa-video';
+                            button.classList.remove('muted');
+                        } else {
+                            icon.className = 'fas fa-video-slash';
+                            button.classList.add('muted');
+                        }
+                        return videoTrack.enabled;
+                    }
+                }
+                return false;
+            }
+        }
+
+        // Initialize WebRTC
+        function initWebRTC() {
+            webrtcManager = new WebRTCManager();
+
+            // Setup event listeners
+            document.getElementById('mute-audio').addEventListener('click', () => {
+                webrtcManager.toggleAudio();
+            });
+
+            document.getElementById('mute-video').addEventListener('click', () => {
+                webrtcManager.toggleVideo();
+            });
+
+            document.getElementById('end-call').addEventListener('click', () => {
+                webrtcManager.endCall();
+            });
+
+            document.getElementById('accept-call').addEventListener('click', () => {
+                webrtcManager.acceptCall();
+            });
+
+            document.getElementById('reject-call').addEventListener('click', () => {
+                webrtcManager.endCall();
+            });
+        }
+
+        // Start audio call
+        async function startAudioCall(calleeId) {
+            if (!currentUser) {
+                showNotification('Please sign in to make calls', 'warning');
+                return;
+            }
+            
+            const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            try {
+                await webrtcManager.createOffer(callId, calleeId, false);
+                document.getElementById('call-interface').style.display = 'block';
+                startCallTimer();
+            } catch (error) {
+                showNotification('Error starting call: ' + error.message, 'error');
+            }
+        }
+
+        // Start video call
+        async function startVideoCall(calleeId) {
+            if (!currentUser) {
+                showNotification('Please sign in to make calls', 'warning');
+                return;
+            }
+            
+            const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            try {
+                await webrtcManager.createOffer(callId, calleeId, true);
+                document.getElementById('call-interface').style.display = 'block';
+                startCallTimer();
+            } catch (error) {
+                showNotification('Error starting call: ' + error.message, 'error');
+            }
+        }
+
+        // Call timer functions
+        function startCallTimer() {
+            callStartTime = Date.now();
+            callTimerInterval = setInterval(() => {
+                const duration = Math.floor((Date.now() - callStartTime) / 1000);
+                const minutes = Math.floor(duration / 60).toString().padStart(2, '0');
+                const seconds = (duration % 60).toString().padStart(2, '0');
+                document.getElementById('call-duration').textContent = `${minutes}:${seconds}`;
+            }, 1000);
+        }
+
+        function stopCallTimer() {
+            if (callTimerInterval) {
+                clearInterval(callTimerInterval);
+                callTimerInterval = null;
+            }
+            document.getElementById('call-duration').textContent = '00:00';
+        }
+
+        // Setup call listeners
+        function setupCallListeners() {
+            if (!currentUser) return;
+            
+            // Listen for incoming calls where current user is the callee
+            db.collection('calls')
+                .where('calleeId', '==', currentUser.uid)
+                .where('status', 'in', ['calling', 'connected'])
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added') {
+                            const callData = change.doc.data();
+                            if (callData.status === 'calling') {
+                                webrtcManager.handleIncomingCall(callData.callId);
+                            }
+                        }
+                    });
+                });
+        }
+
+        // Chat functions
+        function selectConversation(conversationId) {
+            // Implementation for conversation selection
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+            
+            const messagesContainer = document.getElementById('messages-container');
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message message-sent';
+            messageElement.innerHTML = `
+                ${message}
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            messagesContainer.appendChild(messageElement);
+            messageInput.value = '';
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function searchUsers() {
+            showNotification('Search functionality would be implemented here', 'info');
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            // Remove existing notification
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            notification.style.background = 
+                type === 'error' ? '#ff4444' : 
+                type === 'success' ? '#00C851' : 
+                type === 'warning' ? '#ffbb33' : '#33b5e5';
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Enter key to send message
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
