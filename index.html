@@ -305,6 +305,66 @@
             font-size: 1.1rem;
         }
 
+        /* Search Results */
+        .search-results {
+            background: var(--white);
+            border-radius: 15px;
+            margin: 10px 25px;
+            box-shadow: var(--shadow);
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .search-result-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .search-result-item:hover {
+            background: rgba(37, 211, 102, 0.1);
+        }
+
+        .search-result-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .search-result-info {
+            flex: 1;
+        }
+
+        .search-result-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .search-result-details {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .mart-id-tag {
+            background: var(--primary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
         /* Profile Modal */
         .profile-modal {
             position: fixed;
@@ -888,11 +948,16 @@
             <div class="sidebar">
                 <div class="search-container">
                     <div class="search-box">
-                        <input type="text" id="search-input" class="search-input" placeholder="Search users by name, email, or MART ID...">
+                        <input type="text" id="search-input" class="search-input" placeholder="Search users by name, email, or MART ID..." onkeyup="handleSearchInput(event)">
                         <button class="new-chat-btn" onclick="searchUsers()">
                             <i class="fas fa-search"></i>
                         </button>
                     </div>
+                </div>
+
+                <!-- Search Results -->
+                <div class="search-results" id="search-results">
+                    <!-- Search results will appear here -->
                 </div>
                 
                 <div class="conversations-list" id="conversations-list">
@@ -1146,6 +1211,7 @@
         let webrtcManager = null;
         let callTimerInterval = null;
         let callStartTime = null;
+        let searchTimeout = null;
 
         // Initialize App
         document.addEventListener('DOMContentLoaded', function() {
@@ -1278,6 +1344,163 @@
             return `${prefix}-${timestamp}-${random}`.toUpperCase();
         }
 
+        // 🔍 SEARCH FUNCTIONALITY
+        function handleSearchInput(event) {
+            if (event.key === 'Enter') {
+                searchUsers();
+                return;
+            }
+
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+
+            // Set new timeout for real-time search
+            searchTimeout = setTimeout(() => {
+                const searchTerm = document.getElementById('search-input').value.trim();
+                if (searchTerm.length >= 2) {
+                    performSearch(searchTerm);
+                } else {
+                    hideSearchResults();
+                }
+            }, 500);
+        }
+
+        async function performSearch(searchTerm) {
+            if (!searchTerm || searchTerm.length < 2) {
+                hideSearchResults();
+                return;
+            }
+
+            try {
+                showNotification('🔍 Searching users...', 'info');
+                
+                // Convert search term to lowercase for case-insensitive search
+                const searchLower = searchTerm.toLowerCase();
+                
+                // Get all users from Firestore
+                const usersSnapshot = await db.collection('users').get();
+                const searchResults = [];
+
+                usersSnapshot.forEach(doc => {
+                    const userData = doc.data();
+                    
+                    // Skip current user
+                    if (userData.uid === currentUser.uid) return;
+
+                    // Search in multiple fields
+                    const matchesName = userData.displayName && userData.displayName.toLowerCase().includes(searchLower);
+                    const matchesEmail = userData.email && userData.email.toLowerCase().includes(searchLower);
+                    const matchesMartId = userData.martId && userData.martId.toLowerCase().includes(searchLower);
+                    const matchesPhone = userData.phoneNumber && userData.phoneNumber.includes(searchTerm);
+
+                    if (matchesName || matchesEmail || matchesMartId || matchesPhone) {
+                        searchResults.push(userData);
+                    }
+                });
+
+                displaySearchResults(searchResults, searchTerm);
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                showNotification('❌ Search failed: ' + error.message, 'error');
+            }
+        }
+
+        function displaySearchResults(results, searchTerm) {
+            const searchResultsContainer = document.getElementById('search-results');
+            
+            if (results.length === 0) {
+                searchResultsContainer.innerHTML = `
+                    <div class="search-result-item" style="justify-content: center; color: #666;">
+                        <i class="fas fa-search" style="margin-right: 10px;"></i>
+                        No users found for "${searchTerm}"
+                    </div>
+                `;
+                searchResultsContainer.style.display = 'block';
+                return;
+            }
+
+            let resultsHTML = '';
+            
+            results.forEach(user => {
+                const matchType = getMatchType(user, searchTerm);
+                resultsHTML += `
+                    <div class="search-result-item" onclick="startChatWithUser('${user.uid}')">
+                        <div class="search-result-avatar">${user.displayName.charAt(0).toUpperCase()}</div>
+                        <div class="search-result-info">
+                            <div class="search-result-name">${user.displayName}</div>
+                            <div class="search-result-details">
+                                <span class="mart-id-tag">${user.martId}</span>
+                                <span style="margin: 0 8px;">•</span>
+                                ${matchType}
+                            </div>
+                        </div>
+                        <i class="fas fa-comment" style="color: var(--primary);"></i>
+                    </div>
+                `;
+            });
+
+            searchResultsContainer.innerHTML = resultsHTML;
+            searchResultsContainer.style.display = 'block';
+        }
+
+        function getMatchType(user, searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
+            
+            if (user.displayName.toLowerCase().includes(searchLower)) {
+                return `Name: ${user.displayName}`;
+            }
+            if (user.email.toLowerCase().includes(searchLower)) {
+                return `Email: ${user.email}`;
+            }
+            if (user.martId.toLowerCase().includes(searchLower)) {
+                return `MART ID: ${user.martId}`;
+            }
+            if (user.phoneNumber && user.phoneNumber.includes(searchTerm)) {
+                return `Phone: ${user.phoneNumber}`;
+            }
+            
+            return 'User found';
+        }
+
+        function hideSearchResults() {
+            document.getElementById('search-results').style.display = 'none';
+        }
+
+        function searchUsers() {
+            const searchTerm = document.getElementById('search-input').value.trim();
+            if (!searchTerm) {
+                showNotification('🔍 Please enter a name, email, or MART ID to search', 'info');
+                hideSearchResults();
+                return;
+            }
+            performSearch(searchTerm);
+        }
+
+        function startChatWithUser(userId) {
+            // For demo purposes, we'll create a conversation with the selected user
+            showNotification('💬 Starting conversation with selected user...', 'info');
+            
+            // Hide search results
+            hideSearchResults();
+            
+            // Clear search input
+            document.getElementById('search-input').value = '';
+            
+            // In a real implementation, you would:
+            // 1. Create a conversation document in Firestore
+            // 2. Add both users as participants
+            // 3. Update the conversations list
+            // 4. Switch to the new conversation
+            
+            // For now, we'll just show a success message
+            setTimeout(() => {
+                showNotification('✅ Conversation started! You can now chat with this user.', 'success');
+            }, 1000);
+        }
+
         // Profile Management
         function showMyProfile() {
             if (!currentUserData) return;
@@ -1371,7 +1594,7 @@
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
                         { urls: 'stun:stun1.l.google.com:19302' },
-                        { ururls: 'stun:stun2.l.google.com:19302' }
+                        { urls: 'stun:stun2.l.google.com:19302' }
                     ]
                 };
             }
@@ -1768,10 +1991,6 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        function searchUsers() {
-            showNotification('🔍 Search functionality would be implemented here\n\nYou can search by:\n• Name\n• Email\n• MART ID\n• Phone Number', 'info');
-        }
-
         // Notification system
         function showNotification(message, type = 'info') {
             const existingNotification = document.querySelector('.notification');
@@ -1800,6 +2019,16 @@
         document.getElementById('message-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 sendMessage();
+            }
+        });
+
+        // Click outside to close search results
+        document.addEventListener('click', function(event) {
+            const searchResults = document.getElementById('search-results');
+            const searchInput = document.getElementById('search-input');
+            
+            if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+                hideSearchResults();
             }
         });
     </script>
