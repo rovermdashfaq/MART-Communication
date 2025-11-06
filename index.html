@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
     <style>
         :root {
             --primary: #25D366;
@@ -105,6 +106,36 @@
             font-size: 3rem;
             font-weight: 800;
             margin-bottom: 10px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 25px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .auth-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
         }
 
         .auth-input {
@@ -762,10 +793,22 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
 
-        .caller-info img {
+        .caller-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .caller-avatar {
             width: 120px;
             height: 120px;
             border-radius: 50%;
+            background: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.5rem;
             margin-bottom: 25px;
         }
 
@@ -905,13 +948,29 @@
                 <p>Professional Communication Platform</p>
             </div>
             
-            <div id="email-auth">
+            <!-- Auth Tabs -->
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="showAuthTab('signup')">Sign Up</div>
+                <div class="auth-tab" onclick="showAuthTab('login')">Log In</div>
+            </div>
+            
+            <!-- Sign Up Form -->
+            <div id="signup-form" class="auth-form active">
                 <input type="text" id="displayName" class="auth-input" placeholder="Full Name" required>
-                <input type="email" id="email" class="auth-input" placeholder="Email Address" required>
-                <input type="password" id="password" class="auth-input" placeholder="Password" required>
+                <input type="email" id="signup-email" class="auth-input" placeholder="Email Address" required>
+                <input type="password" id="signup-password" class="auth-input" placeholder="Password (min. 6 characters)" required>
                 <input type="tel" id="phoneNumber" class="auth-input" placeholder="Phone Number (Optional)">
                 <button class="auth-btn btn-email" onclick="authSignUp()">
                     <i class="fas fa-user-plus"></i> Create Account
+                </button>
+            </div>
+            
+            <!-- Login Form -->
+            <div id="login-form" class="auth-form">
+                <input type="email" id="login-email" class="auth-input" placeholder="Email Address" required>
+                <input type="password" id="login-password" class="auth-input" placeholder="Password" required>
+                <button class="auth-btn btn-email" onclick="authLogin()">
+                    <i class="fas fa-sign-in-alt"></i> Log In
                 </button>
             </div>
 
@@ -1170,7 +1229,7 @@
     <div class="incoming-call-modal" id="incoming-call-modal">
         <div class="call-modal-content">
             <div class="caller-info">
-                <div class="user-avatar" style="width: 120px; height: 120px; font-size: 2.5rem; margin: 0 auto 25px; background: var(--secondary);">C</div>
+                <div class="caller-avatar">C</div>
                 <h3 id="caller-name">Incoming Call</h3>
                 <p id="call-type">Video Call</p>
             </div>
@@ -1186,20 +1245,22 @@
     </div>
 
     <script>
-        // Firebase Configuration
+        // Firebase Configuration with your project details
         const firebaseConfig = {
-            apiKey: "AIzaSyDvLORiLEiO66AfS8ao9FVZ2kLgSXbiOao",
-            authDomain: "mart-9214e.firebaseapp.com",
-            projectId: "mart-9214e",
-            storageBucket: "mart-9214e.firebasestorage.app",
-            messagingSenderId: "88188904501",
-            appId: "1:88188904501:web:873529058f4dcb4732fd7c"
+            apiKey: "AIzaSyDJHiAg4g_fqHHHvKrCSPAtsEKrBn5ctqs",
+            authDomain: "mart-communication.firebaseapp.com",
+            projectId: "mart-communication",
+            storageBucket: "mart-communication.firebasestorage.app",
+            messagingSenderId: "881958521293",
+            appId: "1:881958521293:web:f63d51e7463c2497761c84"
         };
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const storage = firebase.storage();
+        const messaging = firebase.messaging();
 
         // Auth Providers
         const googleProvider = new firebase.auth.GoogleAuthProvider();
@@ -1219,6 +1280,7 @@
                 document.getElementById('loading-screen').style.display = 'none';
                 initAuth();
                 initWebRTC();
+                // initMessaging(); // Uncomment when ready to implement push notifications
             }, 2000);
         });
 
@@ -1236,10 +1298,31 @@
             });
         }
 
+        // Show auth tabs
+        function showAuthTab(tab) {
+            // Update tabs
+            document.querySelectorAll('.auth-tab').forEach(tabEl => {
+                tabEl.classList.remove('active');
+            });
+            document.querySelectorAll('.auth-form').forEach(form => {
+                form.classList.remove('active');
+            });
+            
+            // Activate selected tab
+            if (tab === 'signup') {
+                document.querySelector('.auth-tab:nth-child(1)').classList.add('active');
+                document.getElementById('signup-form').classList.add('active');
+            } else {
+                document.querySelector('.auth-tab:nth-child(2)').classList.add('active');
+                document.getElementById('login-form').classList.add('active');
+            }
+        }
+
+        // Email/Password Sign Up
         async function authSignUp() {
             const displayName = document.getElementById('displayName').value;
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
             const phoneNumber = document.getElementById('phoneNumber').value;
 
             if (!displayName || !email || !password) {
@@ -1247,10 +1330,20 @@
                 return;
             }
 
+            if (password.length < 6) {
+                showNotification('Password must be at least 6 characters', 'error');
+                return;
+            }
+
             try {
                 const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                 const user = userCredential.user;
                 const martId = generateMartId();
+                
+                // Update user profile
+                await user.updateProfile({
+                    displayName: displayName
+                });
                 
                 currentUserData = {
                     uid: user.uid,
@@ -1278,9 +1371,55 @@
             }
         }
 
+        // Email/Password Login
+        async function authLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            if (!email || !password) {
+                showNotification('Please enter both email and password', 'error');
+                return;
+            }
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showNotification('✅ Signed in successfully', 'success');
+            } catch (error) {
+                showNotification('❌ Error: ' + error.message, 'error');
+            }
+        }
+
         async function googleSignIn() {
             try {
                 const result = await auth.signInWithPopup(googleProvider);
+                
+                // Check if user exists in Firestore
+                const userDoc = await db.collection('users').doc(result.user.uid).get();
+                
+                if (!userDoc.exists) {
+                    // Create user profile if it doesn't exist
+                    const martId = generateMartId();
+                    const userData = {
+                        uid: result.user.uid,
+                        email: result.user.email,
+                        displayName: result.user.displayName,
+                        phoneNumber: result.user.phoneNumber || '',
+                        martId: martId,
+                        customId: martId,
+                        status: 'online',
+                        joinDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                        lastLogin: new Date().toLocaleString(),
+                        contacts: 0,
+                        calls: 0,
+                        messages: 0,
+                        bio: '',
+                        location: '',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    await db.collection('users').doc(result.user.uid).set(userData);
+                }
+                
                 showNotification('✅ Signed in with Google', 'success');
             } catch (error) {
                 showNotification('❌ Error: ' + error.message, 'error');
@@ -1290,6 +1429,34 @@
         async function facebookSignIn() {
             try {
                 const result = await auth.signInWithPopup(facebookProvider);
+                
+                // Check if user exists in Firestore
+                const userDoc = await db.collection('users').doc(result.user.uid).get();
+                
+                if (!userDoc.exists) {
+                    // Create user profile if it doesn't exist
+                    const martId = generateMartId();
+                    const userData = {
+                        uid: result.user.uid,
+                        email: result.user.email,
+                        displayName: result.user.displayName,
+                        phoneNumber: result.user.phoneNumber || '',
+                        martId: martId,
+                        customId: martId,
+                        status: 'online',
+                        joinDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                        lastLogin: new Date().toLocaleString(),
+                        contacts: 0,
+                        calls: 0,
+                        messages: 0,
+                        bio: '',
+                        location: '',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    await db.collection('users').doc(result.user.uid).set(userData);
+                }
+                
                 showNotification('✅ Signed in with Facebook', 'success');
             } catch (error) {
                 showNotification('❌ Error: ' + error.message, 'error');
@@ -1322,7 +1489,8 @@
                 
                 // Update last login
                 await db.collection('users').doc(currentUser.uid).update({
-                    lastLogin: new Date().toLocaleString()
+                    lastLogin: new Date().toLocaleString(),
+                    status: 'online'
                 });
             }
         }
@@ -1344,7 +1512,7 @@
             return `${prefix}-${timestamp}-${random}`.toUpperCase();
         }
 
-        // 🔍 SEARCH FUNCTIONALITY
+        // 🔍 FIXED SEARCH FUNCTIONALITY
         function handleSearchInput(event) {
             if (event.key === 'Enter') {
                 searchUsers();
@@ -1374,8 +1542,6 @@
             }
 
             try {
-                showNotification('🔍 Searching users...', 'info');
-                
                 // Convert search term to lowercase for case-insensitive search
                 const searchLower = searchTerm.toLowerCase();
                 
@@ -2031,6 +2197,25 @@
                 hideSearchResults();
             }
         });
+
+        // Push notifications setup (optional)
+        async function initMessaging() {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    const token = await messaging.getToken();
+                    console.log('FCM Token:', token);
+                    // Store token in Firestore for sending notifications
+                    if (currentUser) {
+                        await db.collection('users').doc(currentUser.uid).update({
+                            fcmToken: token
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error setting up messaging:', error);
+            }
+        }
     </script>
 </body>
 </html>
