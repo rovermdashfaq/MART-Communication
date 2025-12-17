@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MART Code - Advanced Code Previewer</title>
+    <style>
+        /* Reset & Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #3498db;
+            --secondary: #2c3e50;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --dark: #1a1a1a;
+            --light: #f8f9fa;
+            --sidebar: #2d3436;
+            --editor-bg: #1e1e1e;
+            --preview-bg: #ffffff;
+            --border: #3d3d3d;
+            --text: #d4d4d4;
+            --text-muted: #888;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--dark);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* App Layout */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: var(--secondary);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo h1 {
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .logo .version {
+            background: var(--primary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-warning {
+            background: var(--warning);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary);
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: var(--sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .file-explorer {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .file-tree {
+            padding: 10px;
+        }
+
+        .file-item {
+            padding: 8px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .file-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .file-item.active {
+            background: var(--primary);
+        }
+
+        .file-icon {
+            width: 20px;
+            text-align: center;
+        }
+
+        .file-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Editor Area */
+        .editor-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .editor-tabs {
+            background: var(--secondary);
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .editor-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-right: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 150px;
+        }
+
+        .editor-tab.active {
+            background: var(--editor-bg);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .tab-close {
+            margin-left: auto;
+            opacity: 0.7;
+        }
+
+        .tab-close:hover {
+            opacity: 1;
+        }
+
+        /* Code Editor */
+        .code-editor {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #editor {
+            width: 100%;
+            height: 100%;
+            background: var(--editor-bg);
+            color: var(--text);
+            border: none;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            tab-size: 4;
+        }
+
+        /* Preview Area */
+        .preview-area {
+            width: 40%;
+            background: var(--preview-bg);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--border);
+        }
+
+        .preview-header {
+            padding: 10px;
+            background: var(--secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #preview-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: var(--secondary);
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .language-selector {
+            background: var(--dark);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--sidebar);
+            padding: 30px;
+            border-radius: 8px;
+            min-width: 400px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-muted);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            background: var(--dark);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 4px;
+        }
+
+        /* Theme Selector */
+        .theme-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .theme-option {
+            padding: 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .theme-option:hover {
+            transform: translateY(-2px);
+        }
+
+        .theme-option.active {
+            border-color: var(--primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .preview-area {
+                position: fixed;
+                top: 0;
+                right: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 100;
+                display: none;
+            }
+
+            .preview-area.active {
+                display: flex;
+            }
+        }
+
+        /* File Icons */
+        .html-icon { color: #e34c26; }
+        .css-icon { color: #264de4; }
+        .js-icon { color: #f0db4f; }
+        .py-icon { color: #3572A5; }
+        .php-icon { color: #777BB4; }
+        .json-icon { color: #f5de19; }
+        .md-icon { color: #083fa1; }
+        .file-icon { color: #888; }
+        .folder-icon { color: #ffd700; }
+    </style>
+    <!-- Monaco Editor (VS Code editor in browser) -->
+    <script src="https://unpkg.com/monaco-editor@0.33.0/min/vs/loader.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="logo">
+                <h1>MART Code</h1>
+                <span class="version">v1.0</span>
+            </div>
+            <div class="controls">
+                <button class="btn" onclick="newFile()">
+                    <span>📄</span> New
+                </button>
+                <button class="btn" onclick="openFile()">
+                    <span>📂</span> Open
+                </button>
+                <button class="btn btn-success" onclick="saveFile()">
+                    <span>💾</span> Save
+                </button>
+                <button class="btn btn-warning" onclick="runCode()">
+                    <span>▶️</span> Run
+                </button>
+                <button class="btn" onclick="togglePreview()">
+                    <span>👁️</span> Preview
+                </button>
+                <button class="btn" onclick="showSettings()">
+                    <span>⚙️</span> Settings
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="file-explorer">
+                    <div class="file-tree" id="file-tree">
+                        <!-- Files will be loaded here -->
+                    </div>
+                </div>
+                <div style="padding: 10px; border-top: 1px solid var(--border);">
+                    <button class="btn btn-outline" style="width: 100%;" onclick="refreshFiles()">
+                        <span>🔄</span> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Editor Area -->
+            <div class="editor-area">
+                <div class="editor-tabs" id="editor-tabs">
+                    <!-- Tabs will be loaded here -->
+                </div>
+                <div class="code-editor">
+                    <div id="editor-container" style="width: 100%; height: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- Preview Area -->
+            <div class="preview-area" id="preview-area">
+                <div class="preview-header">
+                    <span>Live Preview</span>
+                    <div>
+                        <button class="btn" onclick="refreshPreview()">
+                            <span>🔄</span> Refresh
+                        </button>
+                        <button class="btn btn-danger" onclick="togglePreview()">
+                            <span>✕</span> Close
+                        </button>
+                    </div>
+                </div>
+                <div class="preview-content">
+                    <iframe id="preview-frame"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span id="current-file">Untitled</span>
+                <span id="language">HTML</span>
+                <span id="cursor-position">Ln 1, Col 1</span>
+            </div>
+            <div class="status-item">
+                <select class="language-selector" id="language-selector" onchange="changeLanguage(this.value)">
+                    <option value="html">HTML</option>
+                    <option value="css">CSS</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="python">Python</option>
+                    <option value="php">PHP</option>
+                    <option value="json">JSON</option>
+                    <option value="markdown">Markdown</option>
+                </select>
+                <span id="theme">Dark</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Settings</h2>
+                <button class="modal-close" onclick="hideSettings()">×</button>
+            </div>
+            <div class="form-group">
+                <label>Theme</label>
+                <div class="theme-options">
+                    <div class="theme-option active" style="background: #1a1a1a; color: #d4d4d4;" onclick="changeTheme('dark')">
+                        Dark
+                    </div>
+                    <div class="theme-option" style="background: #f8f9fa; color: #212529;" onclick="changeTheme('light')">
+                        Light
+                    </div>
+                    <div class="theme-option" style="background: #002b36; color: #839496;" onclick="changeTheme('solarized')">
+                        Solarized
+                    </div>
+                    <div class="theme-option" style="background: #282a36; color: #f8f8f2;" onclick="changeTheme('dracula')">
+                        Dracula
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Font Size</label>
+                <input type="range" id="font-size" min="10" max="24" value="14" class="form-control" onchange="changeFontSize(this.value)">
+            </div>
+            <div class="form-group">
+                <label>Tab Size</label>
+                <input type="number" id="tab-size" min="2" max="8" value="4" class="form-control" onchange="changeTabSize(this.value)">
+            </div>
+            <div class="form-group">
+                <label>Auto Save (seconds, 0 to disable)</label>
+                <input type="number" id="auto-save" min="0" max="60" value="10" class="form-control" onchange="changeAutoSave(this.value)">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="new-file-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">New File</h2>
+                <button class="modal-close" onclick="hideNewFileModal()">×</button>
+            </div>
+            <div class="form-group">
+                <label>File Name</label>
+                <input type="text" id="new-filename" class="form-control" placeholder="example.html" value="index.html">
+            </div>
+            <div class="form-group">
+                <label>File Type</label>
+                <select id="new-filetype" class="form-control">
+                    <option value="html">HTML</option>
+                    <option value="css">CSS</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="python">Python</option>
+                    <option value="php">PHP</option>
+                    <option value="json">JSON</option>
+                    <option value="markdown">Markdown</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Template</label>
+                <select id="new-template" class="form-control" onchange="loadTemplate()">
+                    <option value="blank">Blank</option>
+                    <option value="html5">HTML5 Template</option>
+                    <option value="python">Python Script</option>
+                    <option value="php">PHP Template</option>
+                    <option value="react">React Component</option>
+                </select>
+            </div>
+            <button class="btn btn-success" style="width: 100%; margin-top: 20px;" onclick="createNewFile()">
+                Create File
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // MART Code Application
+        class MARTCode {
+            constructor() {
+                this.editor = null;
+                this.currentFile = null;
+                this.files = [];
+                this.activeTab = 0;
+                this.settings = {
+                    theme: 'dark',
+                    fontSize: 14,
+                    tabSize: 4,
+                    autoSave: 10,
+                    preview: true
+                };
+                this.autoSaveInterval = null;
+                this.init();
+            }
+
+            init() {
+                this.loadSettings();
+                this.initMonaco();
+                this.loadSampleFiles();
+                this.setupEventListeners();
+                this.startAutoSave();
+                this.updateFileTree();
+                this.updateTabs();
+            }
+
+            initMonaco() {
+                require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor@0.33.0/min/vs' } });
+                
+                require(['vs/editor/editor.main'], () => {
+                    this.editor = monaco.editor.create(document.getElementById('editor-container'), {
+                        value: this.getTemplate('html5'),
+                        language: 'html',
+                        theme: 'vs-dark',
+                        fontSize: this.settings.fontSize,
+                        tabSize: this.settings.tabSize,
+                        minimap: { enabled: true },
+                        wordWrap: 'on',
+                        automaticLayout: true,
+                        scrollBeyondLastLine: false,
+                        renderLineHighlight: 'all',
+                        scrollbar: {
+                            vertical: 'visible',
+                            horizontal: 'visible',
+                            useShadows: false
+                        }
+                    });
+
+                    // Track cursor position
+                    this.editor.onDidChangeCursorPosition((e) => {
+                        const position = e.position;
+                        document.getElementById('cursor-position').textContent = 
+                            `Ln ${position.lineNumber}, Col ${position.column}`;
+                    });
+
+                    // Track content changes
+                    this.editor.onDidChangeModelContent(() => {
+                        if (this.currentFile) {
+                            this.currentFile.content = this.editor.getValue();
+                            this.currentFile.saved = false;
+                            this.updateTabTitle(this.activeTab);
+                        }
+                    });
+                });
+            }
+
+            getTemplate(name) {
+                const templates = {
+                    'html5': `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hello World!</h1>
+    <p>Welcome to MART Code</p>
+    <script>
+        console.log('Hello from MART Code!');
+    <\/script>
+</body>
+</html>`,
+
+                    'python': `#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+def main():
+    print("Hello from Python!")
+    print("This is MART Code Editor")
+    
+    # Add your code here
+    for i in range(5):
+        print(f"Number: {i}")
+
+if __name__ == "__main__":
+    main()`,
+
+                    'php': `<?php
+// MART Code - PHP Template
+echo "<!DOCTYPE html>\\n";
+echo "<html>\\n";
+echo "<head>\\n";
+echo "    <title>PHP Page</title>\\n";
+echo "</head>\\n";
+echo "<body>\\n";
+echo "    <h1>Hello from PHP!</h1>\\n";
+echo "    <p>Current time: " . date('Y-m-d H:i:s') . "</p>\\n";
+echo "    <?php
+        // PHP code here
+        \$name = 'MART Code';
+        echo '<p>Welcome to ' . \$name . '</p>';
+    ?>
+    ";
+echo "</body>\\n";
+echo "</html>\\n";
+?>`,
+                    'react': `import React, { useState, useEffect } from 'react';
+import './App.css';
+
+function App() {
+    const [count, setCount] = useState(0);
+    
+    useEffect(() => {
+        document.title = \`Count: \${count}\`;
+    }, [count]);
+    
+    return (
+        <div className="App">
+            <header className="App-header">
+                <h1>React Component</h1>
+                <p>Count: {count}</p>
+                <button onClick={() => setCount(count + 1)}>
+                    Increment
+                </button>
+            </header>
+        </div>
+    );
+}
+
+export default App;`,
+
+                    'blank': ''
+                };
+                
+                return templates[name] || '';
+            }
+
+            loadSampleFiles() {
+                this.files = [
+                    {
+                        id: 1,
+                        name: 'index.html',
+                        type: 'html',
+                        content: this.getTemplate('html5'),
+                        saved: true,
+                        path: '/'
+                    },
+                    {
+                        id: 2,
+                        name: 'style.css',
+                        type: 'css',
+                        content: `/* CSS Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+h1 {
+    color: #fff;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.button {
+    background: #3498db;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.button:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+}`,
+                        saved: true,
+                        path: '/'
+                    },
+                    {
+                        id: 3,
+                        name: 'script.js',
+                        type: 'javascript',
+                        content: `// JavaScript Code
+console.log('MART Code - Advanced Editor');
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('dark-theme');
+            document.body.classList.toggle('light-theme');
+        });
+    }
+    
+    // Live preview update
+    function updatePreview() {
+        const html = editor.getValue();
+        const preview = document.getElementById('preview-frame');
+        if (preview && preview.contentWindow) {
+            preview.contentWindow.document.open();
+            preview.contentWindow.document.write(html);
+            preview.contentWindow.document.close();
+        }
+    }
+    
+    // Auto-save feature
+    let saveTimeout;
+    function autoSave() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            console.log('Auto-saving...');
+            // Save logic here
+        }, 3000);
+    }
+    
+    // Initialize components
+    updatePreview();
+});`,
+                        saved: true,
+                        path: '/'
+                    },
+                    {
+                        id: 4,
+                        name: 'app.py',
+                        type: 'python',
+                        content: this.getTemplate('python'),
+                        saved: true,
+                        path: '/'
+                    }
+                ];
+                
+                this.currentFile = this.files[0];
+                this.updateLanguageSelector();
+            }
+
+            newFile(name = 'untitled.html', type = 'html', template = 'blank') {
+                const newFile = {
+                    id: Date.now(),
+                    name: name,
+                    type: type,
+                    content: this.getTemplate(template),
+                    saved: false,
+                    path: '/'
+                };
+                
+                this.files.push(newFile);
+                this.currentFile = newFile;
+                this.activeTab = this.files.length - 1;
+                
+                this.editor.setValue(newFile.content);
+                monaco.editor.setModelLanguage(this.editor.getModel(), type);
+                
+                this.updateFileTree();
+                this.updateTabs();
+                this.updateLanguageSelector();
+                this.updateStatus();
+                
+                document.getElementById('new-file-modal').classList.remove('active');
+            }
+
+            openFile() {
+                // For demo purposes, we'll simulate file opening
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.html,.css,.js,.py,.php,.json,.md';
+                
+                fileInput.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const ext = file.name.split('.').pop().toLowerCase();
+                            const typeMap = {
+                                'html': 'html', 'htm': 'html',
+                                'css': 'css',
+                                'js': 'javascript', 'jsx': 'javascript',
+                                'py': 'python',
+                                'php': 'php',
+                                'json': 'json',
+                                'md': 'markdown'
+                            };
+                            
+                            const newFile = {
+                                id: Date.now(),
+                                name: file.name,
+                                type: typeMap[ext] || 'text',
+                                content: event.target.result,
+                                saved: true,
+                                path: '/'
+                            };
+                            
+                            this.files.push(newFile);
+                            this.currentFile = newFile;
+                            this.activeTab = this.files.length - 1;
+                            
+                            this.editor.setValue(newFile.content);
+                            monaco.editor.setModelLanguage(this.editor.getModel(), newFile.type);
+                            
+                            this.updateFileTree();
+                            this.updateTabs();
+                            this.updateLanguageSelector();
+                            this.updateStatus();
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                
+                fileInput.click();
+            }
+
+            saveFile() {
+                if (this.currentFile) {
+                    // In a real app, this would save to server or localStorage
+                    this.currentFile.saved = true;
+                    this.updateTabTitle(this.activeTab);
+                    
+                    // Create download link
+                    const blob = new Blob([this.currentFile.content], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = this.currentFile.name;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    this.showToast('File saved successfully!');
+                }
+            }
+
+            runCode() {
+                if (!this.currentFile) return;
+                
+                const content = this.editor.getValue();
+                
+                switch(this.currentFile.type) {
+                    case 'html':
+                        this.updatePreview();
+                        break;
+                    case 'python':
+                        this.runPythonCode(content);
+                        break;
+                    case 'javascript':
+                        this.runJavaScriptCode(content);
+                        break;
+                    case 'php':
+                        this.runPHPCode(content);
+                        break;
+                    default:
+                        this.showToast(`Running ${this.currentFile.type} code...`);
+                        console.log(content);
+                }
+            }
+
+            runPythonCode(code) {
+                // Note: Python execution requires backend in real implementation
+                this.showToast('Python execution requires backend server. Showing in console.');
+                console.log('Python Code:', code);
+                
+                // Try to execute in browser (limited)
+                try {
+                    // Use Pyodide or similar for real Python execution
+                    if (window.pyodide) {
+                        window.pyodide.runPython(code);
+                    } else {
+                        // Fallback to JavaScript simulation
+                        const jsCode = code
+                            .replace(/print\((.*?)\)/g, 'console.log($1)')
+                            .replace(/def (\w+)\((.*?)\):/g, 'function $1($2) {')
+                            .replace(/for (\w+) in range\((.*?)\):/g, 'for (let $1 = 0; $1 < $2; $1++) {')
+                            .replace(/#.*/g, '// $&')
+                            .replace(/    /g, '  ');
+                        
+                        eval(jsCode);
+                    }
+                } catch (e) {
+                    console.error('Python execution error:', e);
+                    this.showToast('Error executing Python code');
+                }
+            }
+
+            runJavaScriptCode(code) {
+                try {
+                    eval(code);
+                    this.showToast('JavaScript executed successfully');
+                } catch (e) {
+                    console.error('JavaScript error:', e);
+                    this.showToast('Error: ' + e.message);
+                }
+            }
+
+            runPHPCode(code) {
+                this.showToast('PHP execution requires server-side processing');
+                console.log('PHP Code:', code);
+            }
+
+            updatePreview() {
+                if (!this.currentFile) return;
+                
+                const content = this.editor.getValue();
+                const previewFrame = document.getElementById('preview-frame');
+                
+                if (previewFrame) {
+                    previewFrame.contentWindow.document.open();
+                    
+                    // Add CSS for better preview
+                    const fullHtml = `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <style>
+                                body {
+                                    font-family: Arial, sans-serif;
+                                    padding: 20px;
+                                    margin: 0;
+                                    background: #f5f5f5;
+                                }
+                                .mart-preview {
+                                    max-width: 1200px;
+                                    margin: 0 auto;
+                                    background: white;
+                                    padding: 20px;
+                                    border-radius: 5px;
+                                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="mart-preview">
+                                ${content}
+                            </div>
+                        </body>
+                        </html>
+                    `;
+                    
+                    previewFrame.contentWindow.document.write(fullHtml);
+                    previewFrame.contentWindow.document.close();
+                }
+            }
+
+            togglePreview() {
+                const previewArea = document.getElementById('preview-area');
+                previewArea.classList.toggle('active');
+                
+                if (previewArea.classList.contains('active')) {
+                    this.updatePreview();
+                }
+            }
+
+            refreshPreview() {
+                this.updatePreview();
+                this.showToast('Preview refreshed');
+            }
+
+            showSettings() {
+                document.getElementById('settings-modal').classList.add('active');
+                
+                // Load current settings
+                document.getElementById('font-size').value = this.settings.fontSize;
+                document.getElementById('tab-size').value = this.settings.tabSize;
+                document.getElementById('auto-save').value = this.settings.autoSave;
+                
+                // Highlight current theme
+                document.querySelectorAll('.theme-option').forEach(option => {
+                    option.classList.remove('active');
+                    if (option.textContent.toLowerCase() === this.settings.theme.toLowerCase()) {
+                        option.classList.add('active');
+                    }
+                });
+            }
+
+            hideSettings() {
+                document.getElementById('settings-modal').classList.remove('active');
+            }
+
+            changeTheme(theme) {
+                this.settings.theme = theme;
+                this.applyTheme(theme);
+                this.saveSettings();
+                
+                document.querySelectorAll('.theme-option').forEach(option => {
+                    option.classList.remove('active');
+                    if (option.textContent.toLowerCase() === theme.toLowerCase()) {
+                        option.classList.add('active');
+                    }
+                });
+                
+                document.getElementById('theme').textContent = theme.charAt(0).toUpperCase() + theme.slice(1);
+            }
+
+            applyTheme(theme) {
+                const root = document.documentElement;
+                
+                const themes = {
+                    dark: {
+                        '--dark': '#1a1a1a',
+                        '--sidebar': '#2d3436',
+                        '--editor-bg': '#1e1e1e',
+                        '--border': '#3d3d3d',
+                        '--text': '#d4d4d4'
+                    },
+                    light: {
+                        '--dark': '#f8f9fa',
+                        '--sidebar': '#e9ecef',
+                        '--editor-bg': '#ffffff',
+                        '--border': '#dee2e6',
+                        '--text': '#212529'
+                    },
+                    solarized: {
+                        '--dark': '#002b36',
+                        '--sidebar': '#073642',
+                        '--editor-bg': '#002b36',
+                        '--border': '#586e75',
+                        '--text': '#839496'
+                    },
+                    dracula: {
+                        '--dark': '#282a36',
+                        '--sidebar': '#44475a',
+                        '--editor-bg': '#282a36',
+                        '--border': '#6272a4',
+                        '--text': '#f8f8f2'
+                    }
+                };
+                
+                const themeVars = themes[theme] || themes.dark;
+                Object.entries(themeVars).forEach(([key, value]) => {
+                    root.style.setProperty(key, value);
+                });
+                
+                // Update Monaco editor theme
+                if (this.editor) {
+                    const monacoTheme = theme === 'light' ? 'vs' : 'vs-dark';
+                    monaco.editor.setTheme(monacoTheme);
+                }
+            }
+
+            changeFontSize(size) {
+                this.settings.fontSize = parseInt(size);
+                if (this.editor) {
+                    this.editor.updateOptions({ fontSize: this.settings.fontSize });
+                }
+                this.saveSettings();
+            }
+
+            changeTabSize(size) {
+                this.settings.tabSize = parseInt(size);
+                if (this.editor) {
+                    this.editor.updateOptions({ tabSize: this.settings.tabSize });
+                }
+                this.saveSettings();
+            }
+
+            changeAutoSave(seconds) {
+                this.settings.autoSave = parseInt(seconds);
+                this.startAutoSave();
+                this.saveSettings();
+            }
+
+            changeLanguage(lang) {
+                if (this.currentFile) {
+                    this.currentFile.type = lang;
+                    monaco.editor.setModelLanguage(this.editor.getModel(), lang);
+                    this.updateStatus();
+                    this.showToast(`Language changed to ${lang}`);
+                }
+            }
+
+            loadSettings() {
+                const saved = localStorage.getItem('martcode-settings');
+                if (saved) {
+                    this.settings = { ...this.settings, ...JSON.parse(saved) };
+                    this.applyTheme(this.settings.theme);
+                }
+            }
+
+            saveSettings() {
+                localStorage.setItem('martcode-settings', JSON.stringify(this.settings));
+            }
+
+            startAutoSave() {
+                if (this.autoSaveInterval) {
+                    clearInterval(this.autoSaveInterval);
+                }
+                
+                if (this.settings.autoSave > 0) {
+                    this.autoSaveInterval = setInterval(() => {
+                        if (this.currentFile && !this.currentFile.saved) {
+                            this.saveFile();
+                        }
+                    }, this.settings.autoSave * 1000);
+                }
+            }
+
+            updateFileTree() {
+                const fileTree = document.getElementById('file-tree');
+                fileTree.innerHTML = '';
+                
+                this.files.forEach((file, index) => {
+                    const item = document.createElement('div');
+                    item.className = `file-item ${this.currentFile === file ? 'active' : ''}`;
+                    item.onclick = () => this.switchFile(index);
+                    
+                    const icon = this.getFileIcon(file.type);
+                    
+                    item.innerHTML = `
+                        <span class="file-icon ${file.type}-icon">${icon}</span>
+                        <span class="file-name">${file.name}</span>
+                        ${file.saved ? '' : '<span style="color: #f39c12;">*</span>'}
+                    `;
+                    
+                    fileTree.appendChild(item);
+                });
+            }
+
+            getFileIcon(type) {
+                const icons = {
+                    'html': '🌐',
+                    'css': '🎨',
+                    'javascript': '📜',
+                    'python': '🐍',
+                    'php': '🐘',
+                    'json': '📋',
+                    'markdown': '📝',
+                    'default': '📄'
+                };
+                return icons[type] || icons.default;
+            }
+
+            updateTabs() {
+                const tabsContainer = document.getElementById('editor-tabs');
+                tabsContainer.innerHTML = '';
+                
+                this.files.forEach((file, index) => {
+                    const tab = document.createElement('div');
+                    tab.className = `editor-tab ${index === this.activeTab ? 'active' : ''}`;
+                    tab.onclick = () => this.switchFile(index);
+                    
+                    const icon = this.getFileIcon(file.type);
+                    
+                    tab.innerHTML = `
+                        <span>${icon}</span>
+                        <span style="flex: 1;">${file.name}${file.saved ? '' : ' *'}</span>
+                        <span class="tab-close" onclick="event.stopPropagation(); app.closeFile(${index})">×</span>
+                    `;
+                    
+                    tabsContainer.appendChild(tab);
+                });
+            }
+
+            updateTabTitle(index) {
+                const tabs = document.querySelectorAll('.editor-tab');
+                if (tabs[index]) {
+                    const file = this.files[index];
+                    const icon = this.getFileIcon(file.type);
+                    tabs[index].innerHTML = `
+                        <span>${icon}</span>
+                        <span style="flex: 1;">${file.name}${file.saved ? '' : ' *'}</span>
+                        <span class="tab-close" onclick="event.stopPropagation(); app.closeFile(${index})">×</span>
+                    `;
+                }
+            }
+
+            updateLanguageSelector() {
+                const selector = document.getElementById('language-selector');
+                if (selector && this.currentFile) {
+                    selector.value = this.currentFile.type;
+                }
+            }
+
+            updateStatus() {
+                document.getElementById('current-file').textContent = 
+                    this.currentFile ? this.currentFile.name : 'Untitled';
+                document.getElementById('language').textContent = 
+                    this.currentFile ? this.currentFile.type.toUpperCase() : 'TEXT';
+            }
+
+            switchFile(index) {
+                if (index >= 0 && index < this.files.length) {
+                    this.activeTab = index;
+                    this.currentFile = this.files[index];
+                    
+                    this.editor.setValue(this.currentFile.content);
+                    monaco.editor.setModelLanguage(this.editor.getModel(), this.currentFile.type);
+                    
+                    this.updateTabs();
+                    this.updateFileTree();
+                    this.updateLanguageSelector();
+                    this.updateStatus();
+                }
+            }
+
+            closeFile(index) {
+                if (this.files.length <= 1) {
+                    this.showToast('Cannot close the last file');
+                    return;
+                }
+                
+                if (!this.files[index].saved) {
+                    if (!confirm('File has unsaved changes. Close anyway?')) {
+                        return;
+                    }
+                }
+                
+                this.files.splice(index, 1);
+                
+                if (index === this.activeTab) {
+                    this.activeTab = Math.max(0, index - 1);
+                    this.currentFile = this.files[this.activeTab];
+                    
+                    if (this.currentFile) {
+                        this.editor.setValue(this.currentFile.content);
+                        monaco.editor.setModelLanguage(this.editor.getModel(), this.currentFile.type);
+                    }
+                } else if (index < this.activeTab) {
+                    this.activeTab--;
+                }
+                
+                this.updateTabs();
+                this.updateFileTree();
+                this.updateLanguageSelector();
+                this.updateStatus();
+            }
+
+            showToast(message, type = 'info') {
+                // Create toast element
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'error' ? '#e74c3c' : '#2ecc71'};
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 5px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    z-index: 10000;
+                    animation: slideIn 0.3s ease;
+                `;
+                
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    toast.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => {
+                        document.body.removeChild(toast);
+                    }, 300);
+                }, 3000);
+            }
+
+            setupEventListeners() {
+                // Add CSS animations
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        switch(e.key) {
+                            case 's':
+                                e.preventDefault();
+                                this.saveFile();
+                                break;
+                            case 'n':
+                                e.preventDefault();
+                                this.showNewFileModal();
+                                break;
+                            case 'o':
+                                e.preventDefault();
+                                this.openFile();
+                                break;
+                            case 'r':
+                                e.preventDefault();
+                                this.runCode();
+                                break;
+                            case 'p':
+                                e.preventDefault();
+                                this.togglePreview();
+                                break;
+                        }
+                    }
+                });
+            }
+
+            showNewFileModal() {
+                document.getElementById('new-file-modal').classList.add('active');
+            }
+
+            hideNewFileModal() {
+                document.getElementById('new-file-modal').classList.remove('active');
+            }
+
+            loadTemplate() {
+                const template = document.getElementById('new-template').value;
+                const type = document.getElementById('new-filetype').value;
+                
+                if (template !== 'blank') {
+                    const content = this.getTemplate(template);
+                    // Preview template in editor (optional)
+                }
+            }
+
+            createNewFile() {
+                const name = document.getElementById('new-filename').value;
+                const type = document.getElementById('new-filetype').value;
+                const template = document.getElementById('new-template').value;
+                
+                if (!name) {
+                    this.showToast('Please enter a file name', 'error');
+                    return;
+                }
+                
+                this.newFile(name, type, template);
+            }
+
+            refreshFiles() {
+                this.showToast('Files refreshed');
+                // In a real app, this would re-scan the directory
+            }
+        }
+
+        // Global app instance
+        let app;
+
+        // Initialize app when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            app = new MARTCode();
+            
+            // Make app available globally for HTML event handlers
+            window.app = app;
+            
+            // Load templates into dropdown
+            const templateSelect = document.getElementById('new-template');
+            if (templateSelect) {
+                ['blank', 'html5', 'python', 'php', 'react'].forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template;
+                    option.textContent = template.charAt(0).toUpperCase() + template.slice(1);
+                    templateSelect.appendChild(option);
+                });
+            }
+        });
+
+        // Global functions for HTML event handlers
+        function newFile() {
+            app.showNewFileModal();
+        }
+
+        function openFile() {
+            app.openFile();
+        }
+
+        function saveFile() {
+            app.saveFile();
+        }
+
+        function runCode() {
+            app.runCode();
+        }
+
+        function togglePreview() {
+            app.togglePreview();
+        }
+
+        function showSettings() {
+            app.showSettings();
+        }
+
+        function hideSettings() {
+            app.hideSettings();
+        }
+
+        function hideNewFileModal() {
+            app.hideNewFileModal();
+        }
+
+        function loadTemplate() {
+            app.loadTemplate();
+        }
+
+        function createNewFile() {
+            app.createNewFile();
+        }
+
+        function changeLanguage(lang) {
+            app.changeLanguage(lang);
+        }
+
+        function changeTheme(theme) {
+            app.changeTheme(theme);
+        }
+
+        function changeFontSize(size) {
+            app.changeFontSize(size);
+        }
+
+        function changeTabSize(size) {
+            app.changeTabSize(size);
+        }
+
+        function changeAutoSave(seconds) {
+            app.changeAutoSave(seconds);
+        }
+
+        function refreshPreview() {
+            app.refreshPreview();
+        }
+
+        function refreshFiles() {
+            app.refreshFiles();
+        }
+    </script>
+</body>
+</html>
